@@ -65,8 +65,12 @@ static inline void fine_mapping_sanity_checker(char *value){
 uint32_t fine_init(struct my_cache *mc, uint32_t total_caching_physical_pages){
 	lru_init(&fcm.lru, NULL, entry_to_lba);
 	fcm.max_caching_map=(total_caching_physical_pages*PAGESIZE/FINECACHEENT_SZ);
+    printf("%d\n", fcm.max_caching_map);
 	fcm.max_caching_map-=(fcm.max_caching_map/8)/FINECACHEENT_SZ; //for dirty bit
 	fcm.now_caching_map=0;
+    printf("%d\n", fcm.max_caching_map);
+    //printf("%d\n", total_caching_physical_pages);
+    //assert(0);
 	mc->type=FINE;
 	mc->private_data=NULL;
 
@@ -108,11 +112,14 @@ static inline void map_size_check(uint32_t *eviction_hint){
 uint32_t fine_is_needed_eviction(struct my_cache *mc, uint32_t , uint32_t *, uint32_t eviction_hint){
 //	printf("[ne]%u > %u+%u-%u=%u, %u\n", fcm.max_caching_map, fcm.now_caching_map, (eviction_hint), fcm.now_evicting_map,fcm.now_caching_map+(eviction_hint)-fcm.now_evicting_map, fcm.now_caching_map+(eviction_hint));
 	if(eviction_hint < fcm.now_evicting_map){
-	//	printf("break!\n");
+	//	printf("break!\n");
 	}
 	if(fcm.max_caching_map <=fcm.now_caching_map+ (eviction_hint)/*-fcm.now_evicting_map*/) 
-		return fcm.now_caching_map?NORMAL_EVICTION:EMPTY_EVICTION;
-	//map_size_check(&eviction_hint);
+    {
+       // printf("max: %d, now, %d", fcm.max_caching_map, fcm.now_caching_map);
+        return fcm.now_caching_map?NORMAL_EVICTION:EMPTY_EVICTION;
+    }
+        //map_size_check(&eviction_hint);
 	return HAVE_SPACE;
 }
 

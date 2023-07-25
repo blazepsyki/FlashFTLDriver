@@ -7,8 +7,8 @@ export CC=g++
 export CXX=g++
 
 TARGET_INF=interface
-export TARGET_LOWER=AMF
-export TARGET_ALGO=leaFTL
+export TARGET_LOWER=posix_memory
+export TARGET_ALGO=DFTL
 export TARGET_BM=sequential
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 export USER_DEF

@@ -318,6 +318,8 @@ void demand_map_create_body(uint32_t total_caching_physical_pages, lower_info *l
 
 	total_logical_page_num=(SHOWINGSIZE/LPAGESIZE);
 	total_translation_page_num=total_logical_page_num/(PAGESIZE/sizeof(DMF));
+    
+    printf("%ld %ld %ld %ld\n", dmm.max_caching_pages, total_logical_page_num, total_caching_physical_pages, total_translation_page_num);
 
 	if(total_caching_physical_pages!=UINT32_MAX){
 		dmm.max_caching_pages=total_caching_physical_pages;
@@ -346,6 +348,7 @@ void demand_map_create_body(uint32_t total_caching_physical_pages, lower_info *l
 	printf("|\tratio of PFTL: %.2lf%%\n", ((double)dmm.max_caching_pages * PAGESIZE)/(SHOWINGSIZE/K)*100);
 
 	uint32_t cached_entry=dmm.cache->init(dmm.cache, dmm.max_caching_pages);
+    printf("%d\n", cached_entry);
 	printf("|\tcaching percentage: %.2lf%%\n", (double)cached_entry/total_logical_page_num *100);
 	printf("--------------------\n");
 	if(!data_load){
