@@ -3,7 +3,7 @@
 #include "../../my_cache.h"
 #include "../../demand_mapping.h"
 #include "../../../../include/data_struct/lru_list.h"
-#include "../../../../include/data_struct/bitmap.h"
+#include "../../../../include/"
 
 #define BITMAPFROMLN(ln) (((compftl_cache*)((ln)->data))->map)
 #define HEADARRFROMLN(ln) (((compftl_cache*)((ln)->data))->head_array)
@@ -15,8 +15,8 @@
 #define ISLASTOFFSET(lba) ((GETOFFSET(lba))==PAGESIZE/sizeof(uint32_t)-1)
 
 typedef struct compftl_cache{
-	uint32_t *head_array;
-	bitmap *map;
+	uint32_t *compressed_entries;
+    uint16_t size;
 	GTD_entry *etr;
 }compftl_cache;
 

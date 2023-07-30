@@ -101,22 +101,10 @@ uint32_t compftl_is_needed_eviction(struct my_cache *mc, uint32_t lba, uint32_t 
 		return ccm.now_caching_byte==0? EMPTY_EVICTION : NORMAL_EVICTION;
 	}
 
-	/*compftl get eviction gtd entry*/
-	/*
-	lru_node *target;
-	GTD_entry *etr=NULL;
-	for_each_lru_backword(ccm.lru, target){
-		compftl_cache *cc=(compftl_cache*)target->data;
-		etr=cc->etr;
-		if(target_size > ccm.gtd_size[etr->idx]){
-			break;
-		}
-	}*/
 
 	if(ccm.max_caching_byte <= ccm.now_caching_byte){
-		/*
 		printf("now caching byte bigger!!!! %s:%d\n", __FILE__, __LINE__);
-		abort();*/
+		abort();
 	}
 	return HAVE_SPACE;
 }
@@ -145,10 +133,13 @@ inline static compftl_cache* get_initial_state_cache(uint32_t gtd_idx, GTD_entry
 	return res;
 }
 
-inline static uint32_t get_ppa_from_cc(compftl_cache *cc, uint32_t lba){
-	uint32_t head_offset=get_head_offset(cc->map, lba);
-	uint32_t distance=get_distance(cc->map, lba);
-	return cc->head_array[head_offset]+distance;
+inline static uint32_t get_ppa_from_cc(compftl_cache *cc, uint32_t lba)
+{  
+    uint32_t *decompressed_data = (uint32_t*)malloc(4*1024*sizeof(uint32_t));
+    uint32_t *result_size = LZ4_decompress_safe(cc->compressed_entries, decompressed_data, cc->size, 4*1024*sizeof(uint32_t));
+
+    for(i
+    return cc->head_array[head_offset]+distance;
 }
 
 inline static bool is_sequential(compftl_cache *cc, uint32_t lba, uint32_t ppa){
@@ -460,52 +451,22 @@ uint32_t compftl_update_entry_gc(struct my_cache *, GTD_entry *etr, uint32_t lba
 
 static inline compftl_cache *make_cc_from_translation(GTD_entry *etr, char *data){
 	compftl_cache *cc=(compftl_cache*)malloc(sizeof(compftl_cache));
-	cc->map=bitmap_init(BITMAPMEMBER);
-	cc->etr=etr;
+    cc->size = 0;
+    cc->etr=etr;
 
 	uint32_t total_head=(ccm.gtd_size[etr->idx]-BITMAPSIZE)/sizeof(uint32_t);
-	uint32_t *new_head_array=(uint32_t*)malloc(total_head * sizeof(uint32_t));
-	uint32_t *ppa_list=(uint32_t*)data;
-	uint32_t last_ppa, new_head_idx=0;
-	bool sequential_flag=false;
+	uint32_t *data_after_compression = (uint32_t*)malloc(4 * 1024 * sizeof(uint32_t));
+	uint32_t *data_before_compression = (uint32_t*)data;
+    
 
-	for(uint32_t i=0; i<PAGESIZE/sizeof(uint32_t); i++){
-		if(new_head_idx>total_head){
-			printf("total_head cannot smaller then new_head_idx %s:%d\n", __FILE__, __LINE__);
-			abort();
-		}
-		if(i==0){
-			last_ppa=ppa_list[i];
-			new_head_array[new_head_idx++]=last_ppa;
-			bitmap_set(cc->map, i);
-		}
-		else{
-			sequential_flag=false;
-			if((last_ppa!=UINT32_MAX) && last_ppa+1==ppa_list[i]){
-				sequential_flag=true;
-			}
+    cc->size = LZ4_compress_default(data_before_compression, data_after_compression, 4*1024*sizeof(uint32_t), 4*1024*sizeof(uint32_t));
+    if (cc->size =< 0)
+    {
+        printf("compressed size cannot be below zero!");
+        abort();
+    }
+	cc->compressed_entries = realloc(data_after_compression, cc->size*sizeof(uint32_t))
 
-			if(sequential_flag){
-				if(cc->etr->idx==5275648/4096 && i==0){
-					//GDB_MAKE_BREAKPOINT;
-				}
-				bitmap_unset(cc->map, i);
-				last_ppa++;
-			}
-			else{
-				bitmap_set(cc->map, i);
-				last_ppa=ppa_list[i];
-				new_head_array[new_head_idx++]=last_ppa;
-			}
-		}
-		
-	}
-	if(new_head_idx<total_head){
-		compftl_print_mapping(cc);
-		printf("etr->idx:%u making error:%u\n",etr->idx, etr->physical_address);
-		abort();
-	}
-	cc->head_array=new_head_array;
 	return cc;
 }
 
@@ -514,21 +475,7 @@ uint32_t compftl_insert_entry_from_translation(struct my_cache *, GTD_entry *etr
 		printf("already lru node exists! %s:%d\n", __FILE__, __LINE__);
 		abort();
 	}
-/*
-	bool test=false;
-	if(etr->idx==711){
-		static uint32_t cnt=0;
-		if(cnt++==106){
-			printf("break! %d\n",cnt++);
-		}
-	
-		test=true;
-	}*/
 	compftl_cache *cc=make_cc_from_translation(etr, data);
-	/*
-	if(test){
-		compftl_print_mapping(cc);
-	}*/
 
 	etr->private_data=(void *)lru_push(ccm.lru, (void*)cc);
 	etr->status=CLEAN;
@@ -536,12 +483,7 @@ uint32_t compftl_insert_entry_from_translation(struct my_cache *, GTD_entry *etr
 
 	uint32_t target_size=ccm.gtd_size[etr->idx];
 	(*eviction_hint)-=org_eviction_hint;
-/*
-	if(target_size+sizeof(uint32_t)*2!=org_eviction_hint){
-		printf("changed_size\n");
-		abort();
-	}
-*/
+
 	compftl_size_checker(*eviction_hint);
 	return 1;
 }
@@ -787,4 +729,4 @@ void compftl_empty_cache(struct my_cache *mc){
 	printf("average head num:%lf\n", (double)(average_head_num)/GTDNUM);
 
 	ccm.now_caching_byte=0;
-}
+
